@@ -1,0 +1,25 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+
+# IDE/user files
+.vs/
+.vscode/
+*.user
+*.suo
+*.rsuser
+*.sln.docstates
+
+# Logs and temp
+*.log
+*.tmp
+TestResults/
+coverage/
+coverage*.json
+coverage*.xml
+
+# Environment/secrets
+.env
+*.Development.local.json

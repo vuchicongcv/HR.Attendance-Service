@@ -1,0 +1,32 @@
+services:
+  attendance_db:
+    image: postgres:16
+    container_name: attendance_db
+    environment:
+      POSTGRES_DB: AttendanceDB
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - attendance_db_data:/var/lib/postgresql/data
+
+  attendance_api:
+    build: .
+    container_name: attendance_api
+    depends_on:
+      - attendance_db
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=attendance_db;Port=5432;Database=AttendanceDB;Username=postgres;Password=postgres
+      Jwt__Key: DayLaMotCaiKeyBiMatChoJWTTokenTest@123
+      Jwt__Issuer: HRCoreAPI
+      Jwt__Audience: HRCoreClients
+      RabbitMQ__Host: host.docker.internal
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+    ports:
+      - "5080:8080"
+
+volumes:
+  attendance_db_data:

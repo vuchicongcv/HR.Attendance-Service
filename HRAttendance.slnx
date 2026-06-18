@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="HRAttendance.API/HRAttendance.API.csproj" />
+  <Project Path="HRAttendance.Application/HRAttendance.Application.csproj" />
+  <Project Path="HRAttendance.Domain/HRAttendance.Domain.csproj" />
+  <Project Path="HRAttendance.Infrastructure/HRAttendance.Infrastructure.csproj" />
+  <Project Path="HRAttendance.Tests/HRAttendance.Tests.csproj" />
+</Solution>
