@@ -27,9 +27,11 @@ public class TestingController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> TriggerEndOfMonthDemo([FromQuery] int month, [FromQuery] int year, CancellationToken cancellationToken)
     {
-        // 1. Lấy tất cả nhân viên đang làm việc từ database đồng bộ của N2
+        // Kiểm tra xem trong DB có bao nhiêu nhân viên tổng cộng (bỏ qua điều kiện trạng thái để debug)
+        var totalInDb = await _context.EmployeeReferences.CountAsync(cancellationToken);
+
+        // 1. Lấy tất cả nhân viên đang làm việc từ database đồng bộ của N2 (Bỏ filter trạng thái để đảm bảo không bị sót)
         var employees = await _context.EmployeeReferences
-            .Where(e => e.WorkingStatus == "Active" && e.IsActive)
             .ToListAsync(cancellationToken);
 
         var random = new Random();
@@ -78,6 +80,7 @@ public class TestingController : ControllerBase
         return Ok(new
         {
             Message = "Đã trigger chốt công giả lập thành công.",
+            TotalInDb = totalInDb,
             TotalEmployeesTriggered = triggeredCount,
             Month = month,
             Year = year,
