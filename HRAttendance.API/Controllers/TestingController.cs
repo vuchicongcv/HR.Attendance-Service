@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 
 namespace HRAttendance.API.Controllers;
 
+// Endpoint demo/giả lập — CHỈ tồn tại khi build Debug, không có ở production (Release).
+#if DEBUG
 [ApiController]
 [Route("api/testing")]
 public class TestingController : ControllerBase
@@ -88,3 +90,4 @@ public class TestingController : ControllerBase
         });
     }
 }
+#endif

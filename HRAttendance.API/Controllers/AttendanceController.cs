@@ -51,9 +51,9 @@ public class AttendanceController : ControllerBase
     [AllowAnonymous]
     public IActionResult KioskStatus() => Ok(new { isEnabled = _service.GetKioskEnabled() });
 
-    // Admin/HR khóa hoặc mở kiosk.
+    // Bật/tắt kiosk là cấu hình hệ thống → chỉ Admin.
     [HttpPost("kiosk/toggle")]
-    [Authorize(Roles = "Admin,HR")]
+    [Authorize(Roles = "Admin")]
     public IActionResult KioskToggle([FromBody] KioskToggleRequest request)
     {
         _service.SetKioskEnabled(request.Enabled);
