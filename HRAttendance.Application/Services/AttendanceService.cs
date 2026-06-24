@@ -45,7 +45,8 @@ public class AttendanceService
         if (existing != null)
             throw new InvalidOperationException("Nhân viên đã check-in trong ngày này.");
 
-        var shift = await GetDefaultShiftAsync(cancellationToken);
+        // Chọn ca theo GIỜ check-in (vd: chấm 23h → ca đêm), không mặc định luôn ca ngày.
+        var shift = await ResolveShiftForLocalTimeAsync(TimeOnly.FromDateTime(localNow), cancellationToken);
         var record = new AttendanceRecord
         {
             EmployeeId = employee.EmployeeId,
@@ -408,6 +409,29 @@ public class AttendanceService
             .Where(x => x.IsActive)
             .OrderBy(x => x.ShiftCode == "DAY" ? 0 : 1)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    // Chọn ca có khung giờ chứa thời điểm check-in. Nếu không khớp ca nào (giờ ngoài ca)
+    // thì quay về ca ngày (DAY) làm mặc định.
+    private async Task<Shift?> ResolveShiftForLocalTimeAsync(TimeOnly localTime, CancellationToken cancellationToken)
+    {
+        var shifts = await _context.Shifts
+            .Where(x => x.IsActive)
+            .ToListAsync(cancellationToken);
+        if (shifts.Count == 0)
+            return null;
+
+        return shifts.FirstOrDefault(s => ShiftContains(s, localTime))
+            ?? shifts.FirstOrDefault(s => s.ShiftCode == "DAY")
+            ?? shifts[0];
+    }
+
+    // Kiểm tra giờ có nằm trong khung ca không, hỗ trợ ca qua đêm (EndTime < StartTime).
+    private static bool ShiftContains(Shift shift, TimeOnly time)
+    {
+        if (shift.StartTime <= shift.EndTime)
+            return time >= shift.StartTime && time < shift.EndTime;       // ca trong ngày
+        return time >= shift.StartTime || time < shift.EndTime;            // ca qua đêm
     }
 
     private async Task EnsureManagerCanAccessEmployeeAsync(Guid employeeId, CancellationToken cancellationToken)
