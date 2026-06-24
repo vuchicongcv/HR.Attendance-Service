@@ -170,11 +170,24 @@ public class AttendanceService
             throw new UnauthorizedAccessException("Chỉ Admin/HR được nhập hoặc sửa chấm công thủ công.");
 
         await GetActiveEmployeeAsync(request.EmployeeId, cancellationToken);
-        var shift = request.ShiftId.HasValue
-            ? await _context.Shifts.FirstOrDefaultAsync(x => x.Id == request.ShiftId.Value, cancellationToken)
-            : await GetDefaultShiftAsync(cancellationToken);
-        if (request.ShiftId.HasValue && shift == null)
-            throw new InvalidOperationException("Ca làm việc không tồn tại.");
+
+        // Ưu tiên ca do người dùng chọn; nếu để trống thì tự nhận ca theo GIỜ check-in (vd: 23h → ca đêm).
+        Shift? shift;
+        if (request.ShiftId.HasValue)
+        {
+            shift = await _context.Shifts.FirstOrDefaultAsync(x => x.Id == request.ShiftId.Value, cancellationToken);
+            if (shift == null)
+                throw new InvalidOperationException("Ca làm việc không tồn tại.");
+        }
+        else if (request.CheckInTime.HasValue)
+        {
+            var localCheckIn = TimeZoneInfo.ConvertTimeFromUtc(NormalizeUtc(request.CheckInTime.Value), VietnamTimeZone);
+            shift = await ResolveShiftForLocalTimeAsync(TimeOnly.FromDateTime(localCheckIn), cancellationToken);
+        }
+        else
+        {
+            shift = await GetDefaultShiftAsync(cancellationToken);
+        }
 
         var record = await _context.AttendanceRecords
             .FirstOrDefaultAsync(x => x.EmployeeId == request.EmployeeId && x.WorkDate == request.WorkDate, cancellationToken);
@@ -193,6 +206,10 @@ public class AttendanceService
         record.CheckOutTime = request.CheckOutTime.HasValue ? NormalizeUtc(request.CheckOutTime.Value) : null;
         record.Status = request.Status;
         record.Note = request.Note;
+        // Tính phút đi muộn theo ca (so giờ check-in local với giờ bắt đầu ca).
+        record.LateMinutes = shift != null && record.CheckInTime.HasValue
+            ? CalculateLateMinutes(record.WorkDate, shift, TimeZoneInfo.ConvertTimeFromUtc(record.CheckInTime.Value, VietnamTimeZone))
+            : 0;
         ApplyWorkedTime(record, shift);
         await _context.SaveChangesAsync(cancellationToken);
         return ToDto(record);
