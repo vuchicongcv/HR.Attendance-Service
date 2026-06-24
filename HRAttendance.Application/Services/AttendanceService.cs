@@ -215,14 +215,55 @@ public class AttendanceService
         return ToDto(record);
     }
 
-    public async Task<List<MonthlyAttendanceSummaryDto>> CloseMonthAsync(
+    // Danh sách ca "treo" (quên check-out) trong tháng — để rà soát trước khi chốt công.
+    public async Task<List<OpenShiftDto>> GetOpenShiftsAsync(
         int month,
         int year,
         CancellationToken cancellationToken = default)
     {
         if (!_currentUser.IsInRole("Admin", "HR"))
+            throw new UnauthorizedAccessException("Chỉ Admin/HR được xem danh sách ca treo.");
+        ValidateMonthYear(month, year);
+
+        var query =
+            from r in _context.AttendanceRecords.AsNoTracking()
+            where r.WorkDate.Month == month && r.WorkDate.Year == year
+                && r.CheckInTime != null && r.CheckOutTime == null
+            join e in _context.EmployeeReferences on r.EmployeeId equals e.EmployeeId into ej
+            from e in ej.DefaultIfEmpty()
+            orderby r.WorkDate
+            select new OpenShiftDto(
+                r.Id,
+                r.EmployeeId,
+                e != null ? e.EmployeeCode : string.Empty,
+                e != null ? e.FullName : string.Empty,
+                r.WorkDate,
+                r.CheckInTime);
+
+        return await query.ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<MonthlyAttendanceSummaryDto>> CloseMonthAsync(
+        int month,
+        int year,
+        bool force = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.IsInRole("Admin", "HR"))
             throw new UnauthorizedAccessException("Chỉ Admin/HR được chốt công tháng.");
         ValidateMonthYear(month, year);
+
+        // Chặn chốt khi còn ca treo (quên check-out) — trừ khi người dùng xác nhận bỏ qua (force).
+        if (!force)
+        {
+            var openShiftCount = await _context.AttendanceRecords
+                .CountAsync(x => x.WorkDate.Month == month && x.WorkDate.Year == year
+                    && x.CheckInTime != null && x.CheckOutTime == null, cancellationToken);
+            if (openShiftCount > 0)
+                throw new InvalidOperationException(
+                    $"Còn {openShiftCount} bản ghi quên check-out trong tháng {month}/{year}. " +
+                    "Hãy xử lý (nhập giờ ra) hoặc xác nhận chốt công bỏ qua các bản ghi này.");
+        }
 
         var employees = await _context.EmployeeReferences
             .Where(x => x.IsActive)

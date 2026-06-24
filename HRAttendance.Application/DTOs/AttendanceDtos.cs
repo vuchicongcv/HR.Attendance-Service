@@ -45,6 +45,15 @@ public class ManualAttendanceRequest
     public string? Note { get; set; }
 }
 
+// Ca "treo": có giờ vào nhưng chưa có giờ ra (quên check-out)
+public record OpenShiftDto(
+    Guid Id,
+    Guid EmployeeId,
+    string EmployeeCode,
+    string FullName,
+    DateOnly WorkDate,
+    DateTime? CheckInTime);
+
 public record MonthlyAttendanceSummaryDto(
     Guid Id,
     Guid EmployeeId,

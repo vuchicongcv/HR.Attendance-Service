@@ -90,9 +90,17 @@ public class AttendanceController : ControllerBase
 
     [HttpPost("close")]
     [Authorize(Roles = "Admin,HR")]
-    public async Task<IActionResult> Close([FromQuery] int month, [FromQuery] int year, CancellationToken cancellationToken)
+    public async Task<IActionResult> Close([FromQuery] int month, [FromQuery] int year, [FromQuery] bool force, CancellationToken cancellationToken)
     {
-        return await HandleAsync(() => _service.CloseMonthAsync(month, year, cancellationToken));
+        return await HandleAsync(() => _service.CloseMonthAsync(month, year, force, cancellationToken));
+    }
+
+    // Danh sách ca treo (quên check-out) trong tháng — rà trước khi chốt công.
+    [HttpGet("open-shifts")]
+    [Authorize(Roles = "Admin,HR")]
+    public async Task<IActionResult> GetOpenShifts([FromQuery] int month, [FromQuery] int year, CancellationToken cancellationToken)
+    {
+        return await HandleAsync(() => _service.GetOpenShiftsAsync(month, year, cancellationToken));
     }
 
     [HttpGet("summary")]
